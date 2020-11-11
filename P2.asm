@@ -15,6 +15,18 @@ MAPEO MACRO I, J ;I = NUMERO FILA BUSCAR, J = COLUMNA A BUSCAR
     MUL BL
     ADD AX, J
 ENDM
+MapeoM MACRO Ind, Jind, Col, Tam
+	MOV AL, Ind
+	MOV BL, Col
+	MUL BL
+	MOV BL, Tam
+	MUL BL
+	MOV CL, AL
+	MOV AL, Jind
+	MOV BL, Tam
+	MUL BL
+	ADD AL, CL
+ENDM
 
 .386
 .MODEL flat, stdcall
@@ -38,8 +50,8 @@ INCLUDE		\masm32\include\masm32rt.inc
 	opcion db 4 dup(0),0
 	Mensaje dw 800 dup(0),0
 	Clave DW 800 dup(0),0
-	MensajeMod DW 100 dup ("$"),0
-	ClaveMod DW 100 dup ("$"),0
+	MensajeMod DW 800 dup ("$"),0
+	ClaveMod DW 800 dup ("$"),0
 	CaracteresM DB 100 dup(0),0 ;CANTIDAD CARACTERES EN MENSAJE
 	CaracteresC DB 100 dup(0),0 ;CANTIDAD CARACTERES EN LA CLAVE
 	prob db 12 dup(0),0
@@ -102,17 +114,17 @@ INCLUDE		\masm32\include\masm32rt.inc
 	IngresarCriptograma:
 
 		ImprimirCadena str7
-		INVOKE StdIn, ADDR Clave, 99
+		INVOKE StdIn, ADDR ClaveMod, 99
 		ImprimirCadena str6
-		INVOKE StdIn, ADDR Mensaje, 99
+		INVOKE StdIn, ADDR MensajeMod, 99
 
-		;CALL LimpiarMensaje
-		;CALL LimpiarClave
-		;CALL ContarCadena
-		;CALL ContarCla
-		;MOV AL,CaracteresM
-		;CMP AL, CaracteresC
-		;JL Error
+		CALL LimpiarMensaje
+		CALL LimpiarClave
+		CALL ContarCadena
+		CALL ContarCla
+		MOV AL,CaracteresM
+		CMP AL, CaracteresC
+		JL Error
 		MOV AL, opcion
 		CMP AL, 1
 		JE CriptogramaNormal
@@ -131,8 +143,29 @@ INCLUDE		\masm32\include\masm32rt.inc
 		jmp finalizar
 
 	IngresarDes:
-		jmp programa
+
+
+		jmp finalizar
 	IngresarProb:
+		MOV Fila, 4d
+		MOV Columna,26d
+		MOV ABECEDAR, 65d
+		INVOKE StdOut, ADDR str11
+		INVOKE StdIn, addr Entrada,200d
+		CALL Abecedario
+		;print chr$(13,10)
+		;print chr$(13,10)
+		CALL LeerMensaje
+		CALL ImprimirMatriz
+		print chr$(13,10)
+		print chr$(13,10)
+		CALL CalculoLetras
+		CALL ImprimirMatriz
+		print chr$(13,10)
+		print chr$(13,10)
+		invoke StdOut, ADDR str12
+		CALL RomperCifrado
+
 
 	JMP finalizar
 
@@ -140,8 +173,8 @@ INCLUDE		\masm32\include\masm32rt.inc
 	INVOKE ExitProcess,0
 ;--------------------------- Procedimientos ---------------------------
 	LimpiarMensaje PROC near
-		LEA ESI, Mensaje
-		LEA EDI, MensajeMod
+		LEA ESI, MensajeMod
+		LEA EDI, Mensaje
 		IniciarMod:
 			MOV AL, 24h
 			CMP AL, [ESI]
@@ -161,10 +194,13 @@ INCLUDE		\masm32\include\masm32rt.inc
 				JMP Incrementar
 			VerMinusculaMen:
 				CMP AL, "z"
-				JBE Agregar
+				JBE CambiarMinuscula
 				jmp Incrementar
+		CambiarMinuscula:
+		SUB AL, 32d
+		jmp Agregar
 		Agregar:
-			MOV [EDI], AX
+			MOV [EDI], AL
 			INC EDI
 			JMP Incrementar
 		Incrementar:
@@ -175,8 +211,8 @@ INCLUDE		\masm32\include\masm32rt.inc
 	LimpiarMensaje ENDP
 
 	LimpiarClave PROC near
-		LEA ESI, Clave
-		LEA EDI, ClaveMod
+		LEA ESI, ClaveMod
+		LEA EDI, Clave
 		IniciarModCla:
 			MOV AL, 24h
 			CMP AL, [ESI]
@@ -196,10 +232,13 @@ INCLUDE		\masm32\include\masm32rt.inc
 				JMP IncrementarCla
 			VerMinusculaMenCla:
 				CMP AL, "z"
-				JBE AgregarCla
+				JBE CambiarMinus
 				jmp IncrementarCla
+		CambiarMinus:
+		SUB AL, 32d
+		jmp AgregarCla
 		AgregarCla:
-			MOV [EDI], AX
+			MOV [EDI], AL
 			INC EDI
 			JMP IncrementarCla
 		IncrementarCla:
@@ -212,7 +251,7 @@ INCLUDE		\masm32\include\masm32rt.inc
 	ContarCadena PROC near
 	XOR CL, CL
 	MOV CaracteresM,0h
-	LEA ESI, MensajeMod
+	LEA ESI, Mensaje
 	MOV CL,0h
 	INICIO:
 		MOV AL, 24h
@@ -235,7 +274,7 @@ INCLUDE		\masm32\include\masm32rt.inc
 	ContarCla proc near
 	MOV CaracteresC,0h
 	XOR CL, CL
-	LEA EDI, ClaveMod
+	LEA EDI, Clave
 	MOV CL, 0h
 	InicioClave:
 		MOV AL, 24h
@@ -401,5 +440,201 @@ INCLUDE		\masm32\include\masm32rt.inc
 		MOV AL, [ESI]
 	RET
 	INTERSECCION ENDP
+;------------------------ProcedimientosParte4-----------------
+
+Abecedario proc near
+	LEA ESI, Matriz
+		llenar:
+		MOV AL, ABECEDAR
+		CMP AL, 91d
+		JE FinAbecedario
+		MOV [ESI], AL
+		MOV AUX, AL
+		;INVOKE StdOut, ADDR AUX
+		INC ESI
+		INC ABECEDAR
+		jmp llenar
+	FinAbecedario:
+	print chr$(13,10)
+	;DEC ESI
+	MOV bL, 0d
+	RellenarCero:
+		MOV AL, 1d
+		MOV [ESI],AL 
+		CMP BL, 26d
+		JE FinProc
+		MOV AL, "0"
+		MOV AUX, AL
+		;INVOKE StdOut, ADDR AUX
+		INC BL
+		INC ESI
+		JMP RellenarCero
+	FinProc:
+RET
+Abecedario ENDP 
+LeerMensaje PROC near
+LEA ESI, Entrada
+InicioLeerProb:
+MOV AL, [ESI]
+CMP AL,24h
+JE finLeerCifr
+	VerMin:
+	CMP AL, "a"
+	JAE VerMay
+	JMP restarMayuscula
+	VerMay:
+	CMP AL, "z"
+	JBE restar
+	JMP restarMayuscula
+	restar:
+	SUB AL, 97d
+	jmp IncrementarCont
+	restarMayuscula:
+	SUB AL, 65d
+	jmp IncrementarCont
+	IncrementarCont:
+	;ADD AL, 26d
+	MOV IndiceColumna, AL
+	MapeoM 1d,IndiceColumna,26d,1d
+	LEA EDI, Matriz
+	MOV BL, AL
+	XOR EAX, EAX
+	MOV AL, BL
+	ADD EDI, EAX
+	MOV BL, [EDI]
+	INC BL
+	MOV [EDI], BL
+	INC ESI
+	jmp InicioLeerProb
+	finLeerCifr:
+RET
+LeerMensaje ENDP
+ImprimirMatriz PROC near
+LEA EDI, Matriz
+MOV CONTADOR, 0d
+MOV BL, 0d
+	InImp:
+		mov al, [EDI]
+		;ADD AL, 30H
+		MOV SALD, AL
+		INVOKE StdOut, ADDR SALD
+		CMP BL, 25d
+		JE salto
+		INC BL
+		INC EDI
+		JMP InImp
+	salto:
+	print chr$(13,10)
+	INC EDI
+	MOV BL, 0d
+	SaltoDos:
+		mov al, [EDI]
+		ADD AL, 30H
+		MOV SALD, AL
+		INVOKE StdOut, ADDR SALD
+		CMP BL, 25d
+		JE finLinea
+		INC BL
+		INC EDI
+		
+	JMP SaltoDos
+	finLinea:
+RET
+ImprimirMatriz ENDP
+CalculoLetras PROC near
+LEA ESI, Probabilidad
+InicioCalculo:
+LEA EDI, Matriz
+MOV AL, 26d
+MOV AUX, 0d
+ADD EDI, EAX
+	Asignacion:
+	MOV AL, AUX
+	CMP AL, 26d
+	JE FinCalculo
+	INC AUX
+	MOV AL, [EDI]
+	INC EDI
+	CMP AL, 0d
+	JE Asignacion
+	JMP IniciarComparacion
+	IniciarComparacion:
+	MOV SimboloActual, AL
+	MOV BL, AUX
+	MOV Posicion, BL
+	MOV AUX, 0d
+	LEA EDI, Matriz
+	MOV AL, 26d
+	ADD EDI, EAX
+	Comparacion:
+	MOV BL, [EDI]
+	MOV AL, AUX
+	CMP AL, 26d
+	JE AsignarFin
+	INC EDI
+	INC AUX
+	CMP BL, SimboloActual
+	JLE Comparacion
+	MOV SimboloActual, BL
+	MOV AL, AUX
+	MOV Posicion, AL
+	JMP Comparacion
+	AsignarFin:
+	MOV BL, [ESI]
+	CMP BL, 24H
+	JE FinCalculo
+	LEA EDI, Matriz
+	MOV AL, Posicion
+	DEC AL
+	ADD EDI, EAX
+	MOV [EDI], BL
+	MOV AL, 26d
+	ADD EDI, EAX
+	MOV AL, 0d
+	MOV [EDI],AL
+	INC ESI
+	jmp InicioCalculo
+FinCalculo:	
+RET
+CalculoLetras ENDP
+
+RomperCifrado PROC near
+LEA ESI, Entrada
+InicioLeerProb:
+MOV AL, [ESI]
+CMP AL,24h
+JE finLeerCifr
+CMP AL, 0H
+JE finLeerCifr
+	VerMin:
+	CMP AL, "a"
+	JAE VerMay
+	JMP restarMayuscula
+	VerMay:
+	CMP AL, "z"
+	JBE restar
+	JMP restarMayuscula
+	restar:
+	SUB AL, 97d
+	jmp IncrementarCont
+	restarMayuscula:
+	SUB AL, 65d
+	jmp IncrementarCont
+	IncrementarCont:
+	MOV IndiceColumna, AL
+	MapeoM 0d,IndiceColumna,26d,1d
+	LEA EDI, Matriz
+	MOV BL, AL
+	XOR EAX, EAX
+	MOV AL, BL
+	ADD EDI, EAX
+	MOV BL, [EDI]
+	MOV AUX, BL
+	INVOKE StdOut, ADDR AUX
+	INC ESI
+	jmp InicioLeerProb
+	finLeerCifr:
+RET
+RomperCifrado ENDP
 
 END programa
