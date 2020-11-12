@@ -15,6 +15,7 @@ MAPEO MACRO I, J ;I = NUMERO FILA BUSCAR, J = COLUMNA A BUSCAR
     MUL BL
     ADD AX, J
 ENDM
+
 MapeoM MACRO Ind, Jind, Col, Tam
 	MOV AL, Ind
 	MOV BL, Col
@@ -75,12 +76,15 @@ INCLUDE		\masm32\include\masm32rt.inc
 	LETRAINI DB 41H
 	LETRAFIN DB 5BH
 	INDEXC DB 0H
+	CARACTER DB 0, 0
 
 .DATA?
 	TMP DD ?
+	TMP2 DD ?
+	TMP3 DB ?
 	TMP_C DW ?
 	TMP_F DW ?
-	CARACTER DB ?
+	TEMP DB ?
 .CODE
 	programa:
 	
@@ -112,7 +116,6 @@ INCLUDE		\masm32\include\masm32rt.inc
 	INVOKE StdOut, ADDR str20
 	jmp programa
 	IngresarCriptograma:
-
 		ImprimirCadena str7
 		INVOKE StdIn, ADDR ClaveMod, 99
 		ImprimirCadena str6
@@ -143,8 +146,25 @@ INCLUDE		\masm32\include\masm32rt.inc
 		jmp finalizar
 
 	IngresarDes:
+		ImprimirCadena str7
+		INVOKE StdIn, ADDR ClaveMod, 99
+		ImprimirCadena str6
+		INVOKE StdIn, ADDR MensajeMod, 99
 
-
+		CALL LimpiarMensaje
+		CALL LimpiarClave
+		CALL ContarCadena
+		CALL ContarCla
+		MOV AL,CaracteresM
+		CMP AL, CaracteresC
+		JL Error2
+		JMP CONTINUAR
+		Error2:
+			print chr$("La clave es mas grande que el mensaje"),13,10
+			jmp finalizar
+		CONTINUAR:
+			;INICIA DESCIFRADO
+			CALL DESCIFRAR
 		jmp finalizar
 	IngresarProb:
 		MOV Fila, 4d
@@ -171,7 +191,7 @@ INCLUDE		\masm32\include\masm32rt.inc
 
 	finalizar:
 	INVOKE ExitProcess,0
-;--------------------------- Procedimientos ---------------------------
+;---------------------------- Procedimientos-------------------------
 	LimpiarMensaje PROC near
 		LEA ESI, MensajeMod
 		LEA EDI, Mensaje
@@ -421,6 +441,74 @@ INCLUDE		\masm32\include\masm32rt.inc
 			END_CIFRAR2:
 	RET
 	CIFRAR2 ENDP
+
+	DESCIFRAR PROC NEAR
+		LEA ESI, Mensaje
+		LEA EDI, Clave
+
+		FOR_J3:
+			CALL LIMPIAR
+			MOV AL, [EDI] ;EDI - CLAVE
+			MOV BL, [ESI] ;ESI - MENSAJE
+			MOV TMP3, BL
+			MOV TMP, EDI ; CLAVE
+			MOV TMP2, ESI ; MENSAJE
+			;TMP_C = I	TMP_F = J
+			MOV TMP_C, 0H
+			SUB AX, 41H
+			MOV TMP_F, AX		
+
+			LEA ESI, MATRIZC
+			MAPEO TMP_F, TMP_C ;EAX = POSICIÓN CON LA LETRA DE CLAVE
+			ADD ESI, EAX
+
+			MOV TEMP, 0H
+			FOR_I:
+				CALL LIMPIAR
+				MOV BL, TMP3
+				CMP [ESI], BL
+				JZ END_FORI	
+
+				INC ESI
+				INC TEMP
+				JMP FOR_I
+
+				END_FORI:
+			;CUANDO SALE DEL FOR_I YA SE TIENE EN 
+			;TEMP EL VALOR DE COLUMNA
+			CALL LIMPIAR
+			LEA ESI, MATRIZC
+			MOV AL, TEMP
+			MOV TMP_C, AX
+			MOV TMP_F, 0H
+			MAPEO TMP_F, TMP_C
+			ADD ESI, EAX
+			MOV BL, [ESI]
+			MOV CARACTER, BL
+			INVOKE StdOut, ADDR CARACTER
+
+			MOV EDI, TMP ;CLAVE
+			MOV ESI, TMP2 ;MENSAJE
+			INC EDI
+			INC ESI
+
+			MOV DL, 0H
+			CMP [ESI], DL
+			JZ END_FORJ3
+
+			CMP [EDI], DL
+			JZ REPETIR_CLAVE
+
+			JMP FOR_J3
+
+			REPETIR_CLAVE:
+				LEA EDI, Clave
+				JMP FOR_J3
+
+			END_FORJ3:
+				
+	RET
+	DESCIFRAR ENDP
 
 	INTERSECCION PROC NEAR
 		;CALCULO DE I
