@@ -48,6 +48,8 @@ INCLUDE		\masm32\include\masm32rt.inc
 	str6 db "Ingresar cadena ",13,10,0
 	str7 db "Ingresar clave ",13,10,0
 	str20 db "Opcion no valida ",10,13,0
+	str21 DB "Descifrado normal",10, 13, 0
+	str22 DB 13,10, "Descifrado con variante",10,13,0
 	opcion db 4 dup(0),0
 	Mensaje dw 800 dup(0),0
 	Clave DW 800 dup(0),0
@@ -77,11 +79,13 @@ INCLUDE		\masm32\include\masm32rt.inc
 	LETRAFIN DB 5BH
 	INDEXC DB 0H
 	CARACTER DB 0, 0
+	CLAVE2 DB 800 DUP(0), 0
 
 .DATA?
 	TMP DD ?
 	TMP2 DD ?
 	TMP3 DB ?
+	TMP4 DB ?
 	TMP_C DW ?
 	TMP_F DW ?
 	TEMP DB ?
@@ -117,9 +121,9 @@ INCLUDE		\masm32\include\masm32rt.inc
 	jmp programa
 	IngresarCriptograma:
 		ImprimirCadena str7
-		INVOKE StdIn, ADDR ClaveMod, 99
+		INVOKE StdIn, ADDR ClaveMod, 800
 		ImprimirCadena str6
-		INVOKE StdIn, ADDR MensajeMod, 99
+		INVOKE StdIn, ADDR MensajeMod, 800
 
 		CALL LimpiarMensaje
 		CALL LimpiarClave
@@ -147,9 +151,9 @@ INCLUDE		\masm32\include\masm32rt.inc
 
 	IngresarDes:
 		ImprimirCadena str7
-		INVOKE StdIn, ADDR ClaveMod, 99
+		INVOKE StdIn, ADDR ClaveMod, 800
 		ImprimirCadena str6
-		INVOKE StdIn, ADDR MensajeMod, 99
+		INVOKE StdIn, ADDR MensajeMod, 800
 
 		CALL LimpiarMensaje
 		CALL LimpiarClave
@@ -164,7 +168,9 @@ INCLUDE		\masm32\include\masm32rt.inc
 			jmp finalizar
 		CONTINUAR:
 			;INICIA DESCIFRADO
+			INVOKE StdOut, ADDR str21
 			CALL DESCIFRAR
+			INVOKE StdOut, ADDR str22
 		jmp finalizar
 	IngresarProb:
 		MOV Fila, 4d
@@ -442,6 +448,25 @@ INCLUDE		\masm32\include\masm32rt.inc
 	RET
 	CIFRAR2 ENDP
 
+	INTERSECCION PROC NEAR
+		;CALCULO DE I
+		MOV AX, TMP_C
+		SUB AX, 41H
+		MOV TMP_C, AX
+
+		;CALCULO DE J
+		MOV AX, TMP_F
+		SUB AX, 41H
+		MOV TMP_F, AX
+		
+		LEA ESI, MATRIZC
+		MAPEO TMP_F, TMP_C
+		ADD ESI, EAX
+		CALL LIMPIAR
+		MOV AL, [ESI]
+	RET
+	INTERSECCION ENDP
+
 	DESCIFRAR PROC NEAR
 		LEA ESI, Mensaje
 		LEA EDI, Clave
@@ -510,24 +535,72 @@ INCLUDE		\masm32\include\masm32rt.inc
 	RET
 	DESCIFRAR ENDP
 
-	INTERSECCION PROC NEAR
-		;CALCULO DE I
-		MOV AX, TMP_C
-		SUB AX, 41H
-		MOV TMP_C, AX
+	DESCIFRAR2 PROC NEAR
+		LEA ESI, Mensaje
+		LEA EDI, Clave
+		MOV TMP4, 0H
 
-		;CALCULO DE J
-		MOV AX, TMP_F
-		SUB AX, 41H
-		MOV TMP_F, AX
-		
-		LEA ESI, MATRIZC
-		MAPEO TMP_F, TMP_C
-		ADD ESI, EAX
-		CALL LIMPIAR
-		MOV AL, [ESI]
+		FOR_J4:
+			CALL LIMPIAR
+			MOV AL, [EDI] ;EDI - CLAVE
+			MOV BL, [ESI] ;ESI - MENSAJE
+			MOV TMP3, BL
+			MOV TMP, EDI ; CLAVE
+			MOV TMP2, ESI ; MENSAJE
+			;TMP_C = I	TMP_F = J
+			MOV TMP_C, 0H
+			SUB AX, 41H
+			MOV TMP_F, AX		
+
+			LEA ESI, MATRIZC
+			MAPEO TMP_F, TMP_C ;EAX = POSICIÓN CON LA LETRA DE CLAVE
+			ADD ESI, EAX
+
+			MOV TEMP, 0H
+			FOR_I2:
+				CALL LIMPIAR
+				MOV BL, TMP3
+				CMP [ESI], BL
+				JZ END_FORI2
+
+				INC ESI
+				INC TEMP
+				JMP FOR_I2
+
+				END_FORI2:
+			;CUANDO SALE DEL FOR_I YA SE TIENE EN 
+			;TEMP EL VALOR DE COLUMNA
+			CALL LIMPIAR
+			LEA ESI, MATRIZC
+			MOV AL, TEMP
+			MOV TMP_C, AX
+			MOV TMP_F, 0H
+			MAPEO TMP_F, TMP_C
+			ADD ESI, EAX
+			MOV BL, [ESI]
+			MOV CARACTER, BL
+			INVOKE StdOut, ADDR CARACTER
+
+			MOV EDI, TMP ;CLAVE
+			MOV ESI, TMP2 ;MENSAJE
+			INC EDI
+			INC ESI
+
+			MOV DL, 0H
+			CMP [ESI], DL
+			JZ END_FORJ4
+
+			CMP [EDI], DL
+			JZ REPETIR_CLAVE2
+
+			JMP FOR_J4
+
+			REPETIR_CLAVE2:
+				LEA EDI, CLAVE2
+				JMP FOR_J4
+			END_FORJ4:		
 	RET
-	INTERSECCION ENDP
+	DESCIFRAR ENDP
 ;------------------------ProcedimientosParte4-----------------
 
 Abecedario proc near
