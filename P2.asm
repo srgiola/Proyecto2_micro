@@ -63,7 +63,8 @@ INCLUDE		\masm32\include\masm32rt.inc
 	str11 DB "Ingrese un mensaje",13,10,0
 	str12 DB "Mensaje",13,10,0
 	Probabilidad DB "EAOSNRILDUTCMPQYBHVGJFZKWX$",0
-	Entrada DB 300 DUP("$"),0
+	BECEDARIO DB "ABCDEFGHIJKLMNOPQRSTUVWXYZ",0
+	Entrada DB 600 DUP("$"),0
 	Fila DB 4 DUP(0),0
 	Columna DB 4 DUP(0),0
 	ABECEDAR DB 4 DUP(0),0
@@ -73,6 +74,7 @@ INCLUDE		\masm32\include\masm32rt.inc
 	CONTADOR DB 4 DUP(0),0
 	SALD DB 4 DUP(0),0
 	SimboloActual DB 4 DUP(0),0
+	ContarEntrada DB 5 DUP(0),0
 
 	MATRIZC DB 676 DUP(0)
 	LETRAINI DB 41H
@@ -130,8 +132,8 @@ INCLUDE		\masm32\include\masm32rt.inc
 		CALL LimpiarClave
 		CALL ContarCadena
 		CALL ContarCla
-		MOV AL,CaracteresM
-		;CMP AL, CaracteresC
+		;MOV Ah,CaracteresM
+		;CMP AH, CaracteresC
 		;JL Error
 		MOV AL, opcion
 		CMP AL, 1
@@ -162,8 +164,8 @@ INCLUDE		\masm32\include\masm32rt.inc
 		CALL LimpiarClave
 		CALL ContarCadena
 		CALL ContarCla
-		MOV AL,CaracteresM
-		;CMP AL, CaracteresC
+		;MOV AL,CaracteresM
+		;CMP AH, CaracteresC
 		;JL Error2
 		JMP CONTINUAR
 		Error2:
@@ -182,13 +184,17 @@ INCLUDE		\masm32\include\masm32rt.inc
 		MOV Columna,26d
 		MOV ABECEDAR, 65d
 		INVOKE StdOut, ADDR str11
-		INVOKE StdIn, addr Entrada,200d
+		INVOKE StdIn, addr Entrada,400d
 		CALL Abecedario
 		CALL LeerMensaje
 		CALL ImprimirMatriz
 		print chr$(13,10)
+		CALL MostrarProbabilidad
+		print chr$(13,10)
 		print chr$(13,10)
 		CALL CalculoLetras
+		INVOKE StdOut, ADDR BECEDARIO
+		print chr$(13,10)
 		CALL ImprimirMatriz
 		print chr$(13,10)
 		print chr$(13,10)
@@ -656,18 +662,29 @@ RET
 Abecedario ENDP 
 LeerMensaje PROC near
 LEA ESI, Entrada
+MOV AL, 0
+MOV ContarEntrada, 0d
 InicioLeerProb:
 MOV AL, [ESI]
 CMP AL,24h
 JE finLeerCifr
-	VerMin:
-	CMP AL, "a"
-	JAE VerMay
-	JMP restarMayuscula
-	VerMay:
-	CMP AL, "z"
-	JBE restar
-	JMP restarMayuscula
+
+	VerMayuscula:
+				CMP AL, "A"
+				JAE VerMayusculaMen
+				JMP Incrementar
+			VerMayusculaMen:
+				CMP AL, "Z"
+				JBE restarMayuscula
+				JMP VerMinuscula
+			VerMinuscula:
+				CMP AL, "a"
+				JAE VerMinusculaMen
+				JMP Incrementar
+			VerMinusculaMen:
+				CMP AL, "z"
+				JBE restar
+				jmp Incrementar
 	restar:
 	SUB AL, 97d
 	jmp IncrementarCont
@@ -686,6 +703,8 @@ JE finLeerCifr
 	MOV BL, [EDI]
 	INC BL
 	MOV [EDI], BL
+	INC ContarEntrada
+	Incrementar:
 	INC ESI
 	jmp InicioLeerProb
 	finLeerCifr:
@@ -818,5 +837,40 @@ JE finLeerCifr
 	finLeerCifr:
 RET
 RomperCifrado ENDP
+
+MostrarProbabilidad PROC near
+LEA ESI, Matriz
+MOV AL, 0H
+MOV CONTADOR, AL
+InicioProbab:
+MOV AL, [ESI]
+MOV AUX, AL
+INVOKE StdOut, ADDR AUX
+print chr$(": ")
+XOR EAX, EAX
+MOV AL, 26D
+ADD ESI, EAX
+MOV AL, [ESI]
+SUB AL, 1D
+MOV AUX, AL
+print str$(Al)
+print chr$("/")
+MOV AL, ContarEntrada
+MOV AUX, AL
+print str$(AL)
+print chr$(13,10)
+MOV AL, 26d
+SUB ESI, EAX
+INC ESI
+INC CONTADOR
+MOV AL, CONTADOR
+CMP AL, 26D
+JE Final
+jmp InicioProbab
+Final:
+
+RET
+MostrarProbabilidad ENDP
+
 
 END programa
