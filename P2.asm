@@ -89,6 +89,7 @@ INCLUDE		\masm32\include\masm32rt.inc
 	TMP_C DW ?
 	TMP_F DW ?
 	TEMP DB ?
+	ESI2 DW ?
 .CODE
 	programa:
 	
@@ -130,8 +131,8 @@ INCLUDE		\masm32\include\masm32rt.inc
 		CALL ContarCadena
 		CALL ContarCla
 		MOV AL,CaracteresM
-		CMP AL, CaracteresC
-		JL Error
+		;CMP AL, CaracteresC
+		;JL Error
 		MOV AL, opcion
 		CMP AL, 1
 		JE CriptogramaNormal
@@ -142,9 +143,11 @@ INCLUDE		\masm32\include\masm32rt.inc
 				jmp finalizar
 			CriptogramaNormal:
 				;INICIA CIFRADO NORMAL
+				print chr$(13, 10)
 				CALL CIFRAR
 				jmp finalizar
 			CriptogramaVariacion:
+				print chr$(13, 10)
 				CALL CIFRAR2
 				jmp finalizar
 		jmp finalizar
@@ -160,17 +163,19 @@ INCLUDE		\masm32\include\masm32rt.inc
 		CALL ContarCadena
 		CALL ContarCla
 		MOV AL,CaracteresM
-		CMP AL, CaracteresC
-		JL Error2
+		;CMP AL, CaracteresC
+		;JL Error2
 		JMP CONTINUAR
 		Error2:
 			print chr$("La clave es mas grande que el mensaje"),13,10
 			jmp finalizar
 		CONTINUAR:
 			;INICIA DESCIFRADO
+			print chr$(13, 10)
 			INVOKE StdOut, ADDR str21
 			CALL DESCIFRAR
 			INVOKE StdOut, ADDR str22
+			CALL DESCIFRAR2
 		jmp finalizar
 	IngresarProb:
 		MOV Fila, 4d
@@ -179,8 +184,6 @@ INCLUDE		\masm32\include\masm32rt.inc
 		INVOKE StdOut, ADDR str11
 		INVOKE StdIn, addr Entrada,200d
 		CALL Abecedario
-		;print chr$(13,10)
-		;print chr$(13,10)
 		CALL LeerMensaje
 		CALL ImprimirMatriz
 		print chr$(13,10)
@@ -192,10 +195,10 @@ INCLUDE		\masm32\include\masm32rt.inc
 		invoke StdOut, ADDR str12
 		CALL RomperCifrado
 
-
 	JMP finalizar
 
 	finalizar:
+	print chr$(13, 10)
 	INVOKE ExitProcess,0
 ;---------------------------- Procedimientos-------------------------
 	LimpiarMensaje PROC near
@@ -581,6 +584,8 @@ INCLUDE		\masm32\include\masm32rt.inc
 			MOV CARACTER, BL
 			INVOKE StdOut, ADDR CARACTER
 
+			CALL LLENARCLAVE ;LE METE A CLAVE2 EL CARACTER IMPRESO
+
 			MOV EDI, TMP ;CLAVE
 			MOV ESI, TMP2 ;MENSAJE
 			INC EDI
@@ -596,11 +601,27 @@ INCLUDE		\masm32\include\masm32rt.inc
 			JMP FOR_J4
 
 			REPETIR_CLAVE2:
+				;ACA SE MODIFICA EL LEER CLAVE2
 				LEA EDI, CLAVE2
 				JMP FOR_J4
 			END_FORJ4:		
 	RET
-	DESCIFRAR ENDP
+	DESCIFRAR2 ENDP
+
+	LLENARCLAVE PROC NEAR
+		LEA EDI, CLAVE2
+		FOR_V:
+			MOV DL, [EDI]
+			CMP DL, 0H
+			JZ METERCARACTER
+			INC EDI
+			JMP FOR_V
+				
+			METERCARACTER:
+				MOV DL, CARACTER
+				MOV [EDI], DL
+	RET
+	LLENARCLAVE ENDP
 ;------------------------ProcedimientosParte4-----------------
 
 Abecedario proc near
